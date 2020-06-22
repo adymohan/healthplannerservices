@@ -27,6 +27,7 @@ import com.ibm.healthplanner.model.GetDoctorResponse;
 import com.ibm.healthplanner.model.Patient;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import com.ibm.healthplanner.exception.ResourceNotFoundException;
 import com.ibm.healthplanner.model.Appointment;
 import com.ibm.healthplanner.model.Doctor;
 import com.ibm.healthplanner.model.GetAppointmentResponse;
@@ -52,46 +53,51 @@ public class HealthPlannerController
 
 	}*/
 
+	/*This method is for registering new patient with the application*/
 	@PostMapping(value="/create/patient",headers="Accept=application/json")
-	public ResponseEntity<?> createUser(@RequestBody Patient patient){
+	public ResponseEntity<?> createPatient(@RequestBody Patient patient){
 
-		log.debug("Creating User {}",patient.getName().getFirstName() + " " + patient.getName().getLastName());
+		log.debug("Creating Patient {}",patient.getName().getFirstName() + " " + patient.getName().getLastName());
 
 		healthplannerService.createPatient(patient);
-		return new ResponseEntity<>("User " +patient.getName().getFirstName() + " " + patient.getName().getLastName()
+		return new ResponseEntity<>("Patient " +patient.getName().getFirstName() + " " + patient.getName().getLastName()
 				+ " Created Successfully!!", HttpStatus.CREATED);
 	}
 
+	/*This method is for fetching details of patients registered with the application*/
 	@GetMapping(value="/get/patient", headers="Accept=application/json")
-	public GetPatientResponse getAllUser() {		 
+	public GetPatientResponse getAllPatient() {		 
 		GetPatientResponse patientList = healthplannerService.getAllPatient();
 		return patientList;
 
 	}
 
+	/*This method is to find patient by their unique id*/
 	@GetMapping(value="/get/patient/{id}", headers="accept=application/json")
 	public Optional<Patient> findPatientById(@PathVariable("id") String id){
 		Optional<Patient> patient= healthplannerService.findPatientById(id);
 		return patient;
 	}
 
-
+	/*This method is to update patient details by their unique id*/
 	@PutMapping(value="/update/patient/{id}", headers="Accept=application/json") 
-	public ResponseEntity<Patient> updateUser(@RequestBody Patient currentUser,@PathVariable("id") String id) {
+	public ResponseEntity<Patient> updatePatient(@RequestBody Patient currentUser,@PathVariable("id") String id) {
 
-		log.info("Current UserId is : {} ",currentUser.getId());
+		log.info("Current PatientId is : {} ",currentUser.getId());
 		healthplannerService.updatePatient(currentUser, id);
 		return new ResponseEntity<Patient>(HttpStatus.OK); 
 	}
 
+	/*This method is to delete patient by their unique id*/
 	@DeleteMapping(value="/delete/patient/{id}", headers ="Accept=application/json") 
-	public ResponseEntity<Patient> deleteUser(@PathVariable("id") String id){
+	public ResponseEntity<Patient> deletePatient(@PathVariable("id") String id){
 
-		log.info(" UserId to delete is : {} ",id);		  
+		log.info(" PatientId to delete is : {} ",id);		  
 		healthplannerService.deletePatientById(id);
 		return new ResponseEntity<Patient>(HttpStatus.NO_CONTENT); 
 	}
 
+	/*This method is to register new doctor with the application*/
 	@PostMapping(value="/create/doctor",headers="Accept=application/json")
 	public ResponseEntity<?> createDoctor(@RequestBody Doctor doctor){
 
@@ -102,6 +108,7 @@ public class HealthPlannerController
 				+ " Created Successfully!!", HttpStatus.CREATED);
 	}
 
+	/*This method is to get the details of the doctor registered with the application*/
 	@GetMapping(value="/get/doctor", headers="Accept=application/json")
 	public GetDoctorResponse getAllDoctor() {		 
 		GetDoctorResponse doctorList = healthplannerService.getAllDoctors();
@@ -109,19 +116,21 @@ public class HealthPlannerController
 
 	}
 
+	/*This method is to find doctor by their unique id*/
 	@GetMapping(value="/get/doctor/id/{id}", headers="accept=application/json")
 	public Optional<Doctor> findDoctorById(@PathVariable("id") String id){
 		Optional<Doctor> doctor= healthplannerService.findDoctorById(id);
 		return doctor;
 	}
 
+	/*This method is to find doctor by their specialization*/
 	@GetMapping(value="/get/doctor/specialization/{specialization}", headers="accept=application/json")
 	public GetDoctorResponse findDoctorBySpecialization(@PathVariable("specialization") String specialization){
 		GetDoctorResponse doctor= healthplannerService.getDoctorBySpecialization(specialization);
 		return doctor;
 	}
 
-
+	/*This method is to update doctor details by their unique id*/
 	@PutMapping(value="/update/doctor/{id}", headers="Accept=application/json") 
 	public ResponseEntity<Doctor> updateDoctor(@RequestBody Doctor currentUser,@PathVariable("id") String id) {
 
@@ -138,6 +147,7 @@ public class HealthPlannerController
 		return new ResponseEntity<Doctor>(HttpStatus.NO_CONTENT); 
 	}
 
+	/*This method is to delete doctor by their unique id*/
 	@PostMapping(value="/create/appointment",headers="Accept=application/json")
 	public ResponseEntity<?> createAppointment(@RequestBody Appointment appointment){
 
@@ -148,18 +158,25 @@ public class HealthPlannerController
 				+ " Created Successfully!!", HttpStatus.CREATED);
 	}
 
+	/*This method is to get list of all appointment registered with the application*/
 	@GetMapping(value="/get/appointment", headers="accept=application/json")
 	public GetAppointmentResponse getAllAppointment(){
 		GetAppointmentResponse appointment= healthplannerService.getAllAppointments();
+		if(appointment.getAppointments().isEmpty())
+			throw new ResourceNotFoundException("No Appointments found !!!");
 		return appointment;
 	}
 
+	/*This method is to find appointment by appointment id*/
 	@GetMapping(value="/get/appointment/id/{id}", headers="accept=application/json")
 	public Optional<Appointment> findAppointmentById(@PathVariable("id") String id){
 		Optional<Appointment> appointment= healthplannerService.findAppointmentById(id);
+		if(!appointment.isPresent())
+			throw new ResourceNotFoundException("No Appointments found !!!");
 		return appointment;
 	}
 
+	/*This method is to get appointment available by doctor name*/
 	@GetMapping(value="/get/available/appointment/doctorFirstName/{doctorFirstName}/doctorLastName/{doctorLastName}", headers="accept=application/json")
 	public GetAppointmentResponse findAvailableAppointmentByDoctorName(@PathVariable("doctorFirstName") String doctorFirstName,
 			@PathVariable("doctorLastName") String doctorLastName){
@@ -167,9 +184,12 @@ public class HealthPlannerController
 		Name docName = new Name(doctorFirstName, doctorLastName); 
 		GetAppointmentResponse appointment= healthplannerService.getAvailableAppointmentsByDoctorName(docName);
 		System.out.print("\n\n\nIn controller done\n\n\n");
+		if(appointment.getAppointments().isEmpty())
+			throw new ResourceNotFoundException("No Appointments found by Dr "+ doctorFirstName + " " + doctorLastName);
 		return appointment;
 	}
 	
+	/*This method is to get appointment by doctor name and date*/
 	@GetMapping(value="/get/apponitmentSchedule/doctorFirstName/{doctorFirstName}/doctorLastName/{doctorLastName}/appointmentDate/{appointmentDate}", headers="accept=application/json")
 	public GetAppointmentResponse getAppointmentScheduleByDoctorNameAndAppointmentDate(@PathVariable("doctorFirstName") String doctorFirstName,
 			@PathVariable("doctorLastName") String doctorLastName, 
@@ -191,6 +211,7 @@ public class HealthPlannerController
 		return appointment;
 	}
 
+	/*This method is to get appointment by doctor name and date and slot*/
 	@GetMapping(value="/get/apponitmentSchedule/doctorFirstName/{doctorFirstName}/doctorLastName/{doctorLastName}/appointmentDate/{appointmentDate}/slot/{slot}", headers="accept=application/json")
 	public GetAppointmentResponse getAppointmentScheduleByDoctorNameAndAppointmentDateAndSlot(@PathVariable("doctorFirstName") String doctorFirstName,
 			@PathVariable("doctorLastName") String doctorLastName,
@@ -213,6 +234,7 @@ public class HealthPlannerController
 		return appointment;
 	}
 
+	/*This method is to delete appointment by appointment id*/
 	@DeleteMapping(value="/delete/appointment/{id}", headers ="Accept=application/json") 
 	public ResponseEntity<Doctor> deleteAppointmentById(@PathVariable("id") String id){
 
@@ -221,6 +243,7 @@ public class HealthPlannerController
 		return new ResponseEntity<Doctor>(HttpStatus.NO_CONTENT); 
 	}
 
+	/*This method is to delete appointment by doctor name*/
 	@DeleteMapping(value="/delete/appointment/doctorFirstName/{doctorFirstName}/doctorLastName/{doctorLastName}", headers ="Accept=application/json") 
 	public ResponseEntity<Doctor> deleteAppointmentByDoctorName(@PathVariable("doctorFirstName") String doctorFirstName,
 			@PathVariable("doctorLastName") String doctorLastName){
@@ -228,17 +251,22 @@ public class HealthPlannerController
 		Name docName = new Name(doctorFirstName, doctorLastName); 
 		GetAppointmentResponse appointment= healthplannerService.getAppointmentByDoctorName(docName);
 		List <Appointment> apps = appointment.getAppointments();
-		Iterator<Appointment> itr = apps.iterator();
-		while (itr.hasNext()) {
-			Appointment app = (Appointment)itr.next();
-			healthplannerService.deleteAppointmentById(app.getId());
-			log.info(" DoctorId to delete is : {} ",app.getId());		  
+		if(!apps.isEmpty()) {
+			Iterator<Appointment> itr = apps.iterator();
+			while (itr.hasNext()) {
+				Appointment app = (Appointment)itr.next();
+				healthplannerService.deleteAppointmentById(app.getId());
+				log.info(" DoctorId to delete is : {} ",app.getId());		  
+			}
+		} else {
+			throw new ResourceNotFoundException("No Appointments found by Dr "+ doctorFirstName + " " + doctorLastName );
 		}
 		System.out.print("\n\n\nIn controller done\n\n\n");
 
 		return new ResponseEntity<Doctor>(HttpStatus.NO_CONTENT); 
 	}
 
+	/*This method is to delete appointment by doctor name and appointment date*/
 	@DeleteMapping(value="/delete/appointment/doctorFirstName/{doctorFirstName}/doctorLastName/{doctorLastName}/appointmentDate/{appointmentDate}", headers ="Accept=application/json") 
 	public ResponseEntity<Doctor> deleteAppointmentByDoctorNameAndAppointmentDate(@PathVariable("doctorFirstName") String doctorFirstName,
 			@PathVariable("doctorLastName") String doctorLastName,
@@ -266,6 +294,38 @@ public class HealthPlannerController
 		}
 		System.out.print("\n\n\nIn controller done\n\n\n");
 
+		return new ResponseEntity<Doctor>(HttpStatus.NO_CONTENT); 
+	}
+	
+	/*This method is to delete appointment by doctor name, date and slot*/
+	@DeleteMapping(value="/delete/appointment/doctorFirstName/{doctorFirstName}/doctorLastName/{doctorLastName}/appointmentDate/{appointmentDate}/slot/{slot}", headers ="Accept=application/json") 
+	public ResponseEntity<Doctor> deleteAppointmentByDoctorNameAndAppointmentDateAndSlot(@PathVariable("doctorFirstName") String doctorFirstName,
+			@PathVariable("doctorLastName") String doctorLastName,
+			@PathVariable("appointmentDate") String appointmentDate,
+			@PathVariable("slot") String slot){
+		System.out.print("\n\n\nIn controller\n\n\n");
+		Name docName = new Name(doctorFirstName, doctorLastName); 
+		LocalDate appDate = LocalDate.now();
+		try {
+			if(null != appointmentDate) {
+				List<String> list = Lists.newArrayList(Splitter.on("-").split(appointmentDate));
+				if(list.size() >= 3) {
+					appDate = LocalDate.of(Integer.parseInt(list.get(2)), Integer.parseInt(list.get(1)), Integer.parseInt(list.get(0)));
+				}
+			}
+		} catch(Exception e){
+			System.out.print("\n\n\nIn controller\n\n\n");
+		}
+		GetAppointmentResponse appointment= healthplannerService.getAppointmentByDoctorNameAndAppointmentDateAndSlot(docName, appDate, slot);
+		List <Appointment> apps = appointment.getAppointments();
+		Iterator<Appointment> itr = apps.iterator();
+		while (itr.hasNext()) {
+			Appointment app = (Appointment)itr.next();
+			healthplannerService.deleteAppointmentById(app.getId());
+			log.info(" DoctorId to delete is : {} ",app.getId());		  
+		}
+		System.out.print("\n\n\nIn controller done\n\n\n");
+		
 		return new ResponseEntity<Doctor>(HttpStatus.NO_CONTENT); 
 	}
 

@@ -40,6 +40,7 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	@Autowired
 	AppointmentRepository appointmentRepository;
 
+	/*This method is for registering new patient with the application*/
 	public void createPatient(Patient user) {
 	
 		Optional<Patient> patient = patientRepository.findPatientByName(user.getName());
@@ -61,7 +62,8 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 							+ " Already exists!!");
 		}
 	}
-
+   
+	/*This method is for fetching details of patients registered with the application*/
 	public GetPatientResponse getAllPatient() {
 		
 		GetPatientResponse patietData = new GetPatientResponse();
@@ -69,11 +71,12 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		return patietData;
 	}
 
-	
+	/*This method is to find patient by their unique id*/
 	 public Optional<Patient> findPatientById(String id) { 
 		  return patientRepository.findById(id); 
 	 }
-
+	 
+	 /*This method is to update patient details by their unique id*/
 	public void updatePatient(Patient newPatient, String id) {
 		
 		Optional<Patient> patient = findPatientById(id); 
@@ -106,6 +109,7 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		  patientRepository.save(ptn);	
 	}
 	
+	/*This method is to delete patient by their unique id*/
 	public void deletePatientById(String id) { 
 		  
 		  Optional<Patient> user = findPatientById(id);
@@ -115,7 +119,8 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 			  throw new ResourceNotFoundException("Patient ID "+ id + " does not exits!!");
 		  }
 	}
-	  
+	
+	/*This method is to register new doctor with the application*/ 
 	public void createDoctor(Doctor user) {
 		Optional<Doctor> doctor = doctorRepository.findDoctorByName(user.getName());
 		if(!doctor.isPresent()) {
@@ -130,17 +135,21 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 							+ " Already exists!!");
 		}
 	}
-		
+	
+	
+	/*This method is to get the details of the doctor registered with the application*/
 	public GetDoctorResponse getAllDoctors() {
 	  	GetDoctorResponse doctorData = new GetDoctorResponse();
 	  	doctorData.setDoctors((List<Doctor>) doctorRepository.findAll());
 		return doctorData;
 	}
-		
+	
+	/*This method is to find doctor by their unique id*/
 	public Optional<Doctor> findDoctorById(String id){ 
 		return doctorRepository.findById(id); 
 	}
-		
+	
+	/*This method is to update doctor details by their unique id*/
 	public void updateDoctor(Doctor newDoctor, String id) {
 		
 		Optional<Doctor> doctor = findDoctorById(id); 
@@ -160,16 +169,27 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		doctorRepository.save(dct);	
 	}
   
+	/*This method is to delete doctor by their unique id*/
 	public void deleteDoctorById(String id) { 
 		  
 		Optional<Doctor> user = findDoctorById(id);
 		if (user.isPresent()) { 
+			Doctor doc = user.get();
+			GetAppointmentResponse appointment= getAppointmentByDoctorName(doc.getName());
+			List <Appointment> apps = appointment.getAppointments();
+			Iterator<Appointment> itr = apps.iterator();
+			while (itr.hasNext()) {
+				Appointment app = (Appointment)itr.next();
+				deleteAppointmentById(app.getId());
+				log.info(" Appointment Id to delete is : {} ",app.getId());		  
+			}
 			  doctorRepository.deleteById(id);
 		} else {
 			  throw new ResourceNotFoundException("Doctor ID "+ id + " does not exits!!");
 		}
 	}
 
+	/*This method is to find doctor by their specialization*/
 	public GetDoctorResponse getDoctorBySpecialization(String specilization) {
 		GetDoctorResponse doctorData = new GetDoctorResponse();
 		List<Doctor> doctors = (List<Doctor>) doctorRepository.findDoctorBySpecialization(specilization);
@@ -177,10 +197,12 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	  	return doctorData;
 	}
 
+	/*This method is to create appointment with doctor by a patient*/
 	public void createAppointment(Appointment app) {
 		
 		List<Appointment> appointment = appointmentRepository.findAppointmentByDoctorNameAndAppointmentDateAndSlot(app.getDoctorName(), app.getAppointmentDate(), app.getSlot());
-		if(appointment.isEmpty() && doctorRepository.findDoctorByName(app.getDoctorName()).isPresent() && patientRepository.findPatientByName(app.getPatientName()).isPresent()) {
+		if(appointment.isEmpty() && doctorRepository.findDoctorByName(app.getDoctorName()).isPresent() && patientRepository.findPatientByName(app.getPatientName()).isPresent()
+				&& (app.getSlot().equals("Slot1") || app.getSlot().equals("Slot2") || app.getSlot().equals("Slot3"))) {
 		    String id = "A" + "-" + System.currentTimeMillis();
 		    app.setId(id);
 			appointmentRepository.save(app);
@@ -192,18 +214,23 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 			log.info ("Patient is invalid!!");
 			throw new ResourceExistsException("Patient "+ app.getPatientName().getFirstName() + " " +app.getPatientName().getLastName() 
 							+ " is invalid!!");
-		}else {
+		} else if (!app.getSlot().equals("Slot1") && !app.getSlot().equals("Slot2") && !app.getSlot().equals("Slot3")){
+			log.info ("Invalid Slot !! Values allowed are Slot1 or Slot2 or Slot3");
+			throw new ResourceExistsException("Slot is invalid!! Values allowed are Slot1 or Slot2 or Slot3");
+		} else {
 			log.info ("Appointment Already exists!!");
 			throw new ResourceExistsException("Doctor "+ app.getDoctorName().getFirstName() + " " +app.getDoctorName().getLastName() 
 							+ " is not available at the requested time!!");
 		}
 	}
 
+	/*This method is to find appointment by appointment id*/
 	public Optional<Appointment> findAppointmentById(String id) {
 		
 		return appointmentRepository.findById(id); 
 	}
 
+	/*This method is to delete appointment by appointment id*/
 	public void deleteAppointmentById(String id) {
 		Optional<Appointment> app = findAppointmentById(id);
 		  if (app.isPresent()) { 
@@ -213,6 +240,7 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		  }
 	}
 
+	/*This method is to get list of all appointment registered with the application*/
 	public GetAppointmentResponse getAllAppointments() {
 		GetAppointmentResponse appointmentData = new GetAppointmentResponse();
 		List<Appointment> appointments = (List<Appointment>) appointmentRepository.findAll();
@@ -220,39 +248,44 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	  	return appointmentData;
 	}
 	
-	
+	/*This method is to get list of all appointment by doctor name*/
 	public GetAppointmentResponse getAppointmentByDoctorName(Name name) {
-		System.out.println("\n\n\n\n\n----------hello---------\n\n\n\n\n");
 		GetAppointmentResponse appointmentData = new GetAppointmentResponse();
 		System.out.print("Name = "+name);
 		List<Appointment> appointments = (List<Appointment>) appointmentRepository.findAppointmentByDoctorName(name);
-	
-		appointmentData.setAppointments(appointments);
+		if(!appointments.isEmpty()) {
+			appointmentData.setAppointments(appointments);
+		} else {
+			throw new ResourceNotFoundException("No Appointments found by Dr "+ name.getFirstName() + " " + name.getLastName());
+		}
 	  	return appointmentData;
 	}
 
+	/*This method is to get list of all appointment by doctor name and appointment date*/
 	public GetAppointmentResponse getAppointmentByDoctorNameAndAppointmentDate(Name name, LocalDate appointmentDate) {
 		GetAppointmentResponse appointmentData = new GetAppointmentResponse();
 		List<Appointment> appointments = (List<Appointment>) appointmentRepository.findAppointmentByDoctorNameAndAppointmentDate(name, appointmentDate);
 		if(!appointments.isEmpty()) {
 			appointmentData.setAppointments(appointments);
 		} else {
-			throw new ResourceNotFoundException("Appointment does not exits!!");
+			throw new ResourceNotFoundException("No Appointments found by Dr "+ name.getFirstName() + " " + name.getLastName() + " on "+ appointmentDate.toString() );
 		}
 	  	return appointmentData;
 	}
 	 
+	/*This method is to get list of all appointment by doctor name and appointment date and slot allocated*/
 	public GetAppointmentResponse getAppointmentByDoctorNameAndAppointmentDateAndSlot(Name name, LocalDate appointmentDate, String slot) {
 		GetAppointmentResponse appointmentData = new GetAppointmentResponse();
 		List<Appointment> appointments = (List<Appointment>) appointmentRepository.findAppointmentByDoctorNameAndAppointmentDateAndSlot(name, appointmentDate, slot);
 		if(!appointments.isEmpty()) {
 			appointmentData.setAppointments(appointments);
 		} else {
-			throw new ResourceNotFoundException("Appointment does not exits!!");
+			throw new ResourceNotFoundException("No Appointments found by Dr "+ name.getFirstName() + " " + name.getLastName() + " on "+ appointmentDate.toString() +" for "+ slot);
 		}
 	  	return appointmentData;
 	}
 	
+	/*This method is to get list of all available appointment by doctor name*/
 	public GetAppointmentResponse getAvailableAppointmentsByDoctorName(Name name) {
 		GetAppointmentResponse appointmentData = new GetAppointmentResponse();
 		//check for valid doctor
@@ -297,15 +330,16 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	  	return appointmentData;
 	}
 	
+	/*This method is to check doctor availability by doctor name*/
 	public List<Appointment> allPossibleAppointmentsByDoctorName(Name name) {
 		System.out.println("\n\n\nChecking all possible Appointments for today and tomorrow for a Doctor");
 		List<Appointment> allPossibleAppointments = new ArrayList<Appointment>();
-		Appointment app1 = new Appointment("Slot1", LocalDate.now(), new Name(), name);
-		Appointment app2 = new Appointment("Slot2", LocalDate.now(), new Name(), name);
-		Appointment app3 = new Appointment("Slot3", LocalDate.now(), new Name(), name);
-		Appointment app5 = new Appointment("Slot1", LocalDate.now().plusDays(1), new Name(), name);
-		Appointment app6 = new Appointment("Slot2", LocalDate.now().plusDays(1), new Name(), name);
-		Appointment app7 = new Appointment("Slot3", LocalDate.now().plusDays(1), new Name(), name);
+		Appointment app1 = new Appointment("Slot1", LocalDate.now().plusDays(1), new Name(), name);
+		Appointment app2 = new Appointment("Slot2", LocalDate.now().plusDays(1), new Name(), name);
+		Appointment app3 = new Appointment("Slot3", LocalDate.now().plusDays(1), new Name(), name);
+		Appointment app5 = new Appointment("Slot1", LocalDate.now().plusDays(2), new Name(), name);
+		Appointment app6 = new Appointment("Slot2", LocalDate.now().plusDays(2), new Name(), name);
+		Appointment app7 = new Appointment("Slot3", LocalDate.now().plusDays(2), new Name(), name);
 		
 		allPossibleAppointments.add(app1);
 		allPossibleAppointments.add(app2);
