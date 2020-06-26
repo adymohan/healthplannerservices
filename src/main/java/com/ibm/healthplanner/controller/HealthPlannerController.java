@@ -35,6 +35,8 @@ import com.ibm.healthplanner.service.HealthPlannerService;
 
 
 import io.swagger.annotations.Api;
+/*Adding all the rest calls availablefor our application here*/
+
 @RestController("healthplanner")
 @CrossOrigin(origins="*")
 @RequestMapping(value={"/","/healthplanner"})
