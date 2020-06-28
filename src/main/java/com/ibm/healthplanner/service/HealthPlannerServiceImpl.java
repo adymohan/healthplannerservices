@@ -103,6 +103,7 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 			  ptn.setCaffineUse(newPatient.getCaffineUse());
 			  ptn.setAllergies(newPatient.getAllergies());
 			  ptn.setAllergicFrom(newPatient.getAllergicFrom());
+			  
 		  } else {
 			  throw new ResourceNotFoundException("Patient ID "+ id + " does not exits");
 		  }
@@ -157,16 +158,18 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		if(doctor.isPresent()) {  
 		  
 			  dct = doctor.get();
-			  dct.setId(newDoctor.getId());
+			  dct.setId(id);
 			  dct.setName(newDoctor.getName());
 			  dct.setSlot1(newDoctor.getSlot1());
 			  dct.setSlot2(newDoctor.getSlot2());
 			  dct.setSlot3(newDoctor.getSlot3());
+			  dct.setPrice(newDoctor.getPrice());
+			  dct.setRoomNo(newDoctor.getRoomNo());
 			  dct.setSpecialization(newDoctor.getSpecialization());
 		} else {
 			  throw new ResourceNotFoundException("Doctor ID "+ newDoctor.getId() + " does not exits");
 		}
-		doctorRepository.save(dct);	
+		doctorRepository.save(dct);
 	}
   
 	/*This method is to delete doctor by their unique id*/
@@ -177,13 +180,15 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 			Doctor doc = user.get();
 			GetAppointmentResponse appointment= getAppointmentByDoctorName(doc.getName());
 			List <Appointment> apps = appointment.getAppointments();
-			Iterator<Appointment> itr = apps.iterator();
-			while (itr.hasNext()) {
-				Appointment app = (Appointment)itr.next();
-				deleteAppointmentById(app.getId());
-				log.info(" Appointment Id to delete is : {} ",app.getId());		  
+			if(!apps.isEmpty() && apps.size()>0) {
+				Iterator<Appointment> itr = apps.iterator();
+				while (itr.hasNext()) {
+					Appointment app = (Appointment)itr.next();
+					deleteAppointmentById(app.getId());
+					log.info(" Appointment Id to delete is : {} ",app.getId());		  
+				}
 			}
-			  doctorRepository.deleteById(id);
+			doctorRepository.deleteById(id);
 		} else {
 			  throw new ResourceNotFoundException("Doctor ID "+ id + " does not exits!!");
 		}
@@ -255,9 +260,9 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		List<Appointment> appointments = (List<Appointment>) appointmentRepository.findAppointmentByDoctorName(name);
 		if(!appointments.isEmpty()) {
 			appointmentData.setAppointments(appointments);
-		} else {
+		} /*else {
 			throw new ResourceNotFoundException("No Appointments found by Dr "+ name.getFirstName() + " " + name.getLastName());
-		}
+		}*/
 	  	return appointmentData;
 	}
 
