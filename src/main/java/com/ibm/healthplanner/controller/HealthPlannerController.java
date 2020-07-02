@@ -35,8 +35,6 @@ import com.ibm.healthplanner.service.HealthPlannerService;
 
 
 import io.swagger.annotations.Api;
-/*Adding all the rest calls availablefor our application here*/
-
 @RestController("healthplanner")
 @CrossOrigin(origins="*")
 @RequestMapping(value={"/","/healthplanner"})
@@ -240,7 +238,7 @@ public class HealthPlannerController
 	@DeleteMapping(value="/delete/appointment/{id}", headers ="Accept=application/json") 
 	public ResponseEntity<Doctor> deleteAppointmentById(@PathVariable("id") String id){
 
-		log.info(" DoctorId to delete is : {} ",id);		  
+		log.info(" Appointment to delete is : {} ",id);		  
 		healthplannerService.deleteAppointmentById(id);
 		return new ResponseEntity<Doctor>(HttpStatus.NO_CONTENT); 
 	}
@@ -258,7 +256,7 @@ public class HealthPlannerController
 			while (itr.hasNext()) {
 				Appointment app = (Appointment)itr.next();
 				healthplannerService.deleteAppointmentById(app.getId());
-				log.info(" DoctorId to delete is : {} ",app.getId());		  
+				log.info(" AppointmentId to delete is : {} ",app.getId());		  
 			}
 		} else {
 			throw new ResourceNotFoundException("No Appointments found by Dr "+ doctorFirstName + " " + doctorLastName );
@@ -292,7 +290,7 @@ public class HealthPlannerController
 		while (itr.hasNext()) {
 			Appointment app = (Appointment)itr.next();
 			healthplannerService.deleteAppointmentById(app.getId());
-			log.info(" DoctorId to delete is : {} ",app.getId());		  
+			log.info(" AppointmentId to delete is : {} ",app.getId());		  
 		}
 		System.out.print("\n\n\nIn controller done\n\n\n");
 
@@ -324,7 +322,7 @@ public class HealthPlannerController
 		while (itr.hasNext()) {
 			Appointment app = (Appointment)itr.next();
 			healthplannerService.deleteAppointmentById(app.getId());
-			log.info(" DoctorId to delete is : {} ",app.getId());		  
+			log.info(" AppointmentId to delete is : {} ",app.getId());		  
 		}
 		System.out.print("\n\n\nIn controller done\n\n\n");
 		
