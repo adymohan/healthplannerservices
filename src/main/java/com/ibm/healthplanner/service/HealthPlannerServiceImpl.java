@@ -1,10 +1,25 @@
 package com.ibm.healthplanner.service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
+
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,6 +179,7 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 			  dct.setSlot2(newDoctor.getSlot2());
 			  dct.setSlot3(newDoctor.getSlot3());
 			  dct.setPrice(newDoctor.getPrice());
+			  dct.setContactNo(newDoctor.getContactNo());
 			  dct.setRoomNo(newDoctor.getRoomNo());
 			  dct.setSpecialization(newDoctor.getSpecialization());
 		} else {
@@ -211,6 +227,21 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		    String id = "A" + "-" + System.currentTimeMillis();
 		    app.setId(id);
 			appointmentRepository.save(app);
+			try {
+				Optional <Patient> pat = patientRepository.findPatientByName(app.getPatientName());
+				pat.get().getMailId();
+				if(!pat.get().getMailId().isEmpty() && !pat.get().getMailId().equalsIgnoreCase("string"))
+					sendmail(pat.get().getMailId(), doctorRepository.findDoctorByName(app.getDoctorName()).get(), 1, app);
+			} catch(AddressException e) {
+				log.info ("Email send failed with Address Exception " + e.getMessage());
+				//e.printStackTrace();
+			} catch (MessagingException e) {
+				log.info ("Email send failed with MessagingException " + e.getMessage());
+				//e.printStackTrace();
+			} catch (IOException e) {
+				log.info ("Email send failed with IOException " + e.getMessage());
+				//e.printStackTrace();
+			} 
 		} else if (!doctorRepository.findDoctorByName(app.getDoctorName()).isPresent()){
 			log.info ("Doctor is invalid!!");
 			throw new ResourceExistsException("Doctor "+ app.getDoctorName().getFirstName() + " " +app.getDoctorName().getLastName() 
@@ -240,6 +271,19 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		Optional<Appointment> app = findAppointmentById(id);
 		  if (app.isPresent()) { 
 			  appointmentRepository.deleteById(id);
+			  Optional <Patient> pat = patientRepository.findPatientByName(app.get().getPatientName());
+			  try {
+				  sendmail(pat.get().getMailId(), doctorRepository.findDoctorByName(app.get().getDoctorName()).get(), 0, app.get());
+			  } catch(AddressException e) {
+					log.info ("Email send failed with Address Exception " + e.getMessage());
+					//e.printStackTrace();
+				} catch (MessagingException e) {
+					log.info ("Email send failed with MessagingException " + e.getMessage());
+					//e.printStackTrace();
+				} catch (IOException e) {
+					log.info ("Email send failed with IOException " + e.getMessage());
+					//e.printStackTrace();
+				}
 		  } else {
 			  throw new ResourceNotFoundException("Appointment ID "+ id + " does not exits!!");
 		  }
@@ -355,4 +399,32 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 		System.out.println("\\n\\n\\nCollected  all possible Appointments for today and tomorrow for a Doctor");
 		return allPossibleAppointments;
 	}
+	
+	private void sendmail(String patientMailId, Doctor doc, int flag, Appointment app) throws AddressException, MessagingException, IOException {
+		   Properties props = new Properties();
+		   props.put("mail.smtp.auth", "true");
+		   props.put("mail.smtp.starttls.enable", "true");
+		   props.put("mail.smtp.host", "smtp.gmail.com");
+		   props.put("mail.smtp.port", "587");
+		   Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+			      protected PasswordAuthentication getPasswordAuthentication() {
+			         return new PasswordAuthentication("ambantest@gmail.com", "nalasupara123");
+			      }
+			   });
+		   Message msg = new MimeMessage(session);
+		   msg.setFrom(new InternetAddress("ambantest@gmail.com", false));
+		   msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(patientMailId));
+		   if(flag == 1) {
+			   msg.setSubject("Amban Appointment Details");
+			   msg.setContent("Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getLastName() + " is confirmed for "+ app.getAppointmentDate()
+			   + " " + app.getSlot() + ". Operations team will connect you with doctor on appointment date. \n" +  "Regards, \n" + "Amban Team", "text/html");
+		   } else {
+			   msg.setSubject("Amban Appointment Cancelled Details");
+			   msg.setContent("Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getLastName() + " on "+ app.getAppointmentDate() 
+			   +" has been cancelled due to unforseen reasons. \n"+ "Kindly contact the hospital for arranging a new appointment. \n" + "Apologies for the inconvenience caused. \n"
+			   + "Regards, \n" +"Amban Team", "text/html");
+		   }
+		   msg.setSentDate(new Date());
+		   Transport.send(msg);   
+		}
 }
