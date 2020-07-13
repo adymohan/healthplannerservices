@@ -3,22 +3,27 @@ package com.ibm.healthplanner.service;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
+
+import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
 import javax.mail.internet.AddressException;
-
-
-import com.sendgrid.*;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,9 +54,6 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	
 	@Autowired
 	AppointmentRepository appointmentRepository;
-	
-	@Autowired
-	private Environment env;
 
 	/*This method is for registering new patient with the application*/
 	public void createPatient(Patient user) {
@@ -399,39 +401,30 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	}
 	
 	private void sendmail(String patientMailId, Doctor doc, int flag, Appointment app) throws AddressException, MessagingException, IOException {
-	    String subject;
-	    Content content;
-		 
-	    Email from = new Email("ambantest@gmail.com");
-	    Email to = new Email(patientMailId);
-	    String path = env.getProperty("sendgrid.api.key");
-	   
-	    if(flag == 1) {
-			   subject="Amban Appointment Details";
-			   content= new Content("text/plain","Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getLastName() + " is confirmed for "+ app.getAppointmentDate()
-			   + " " + app.getSlot() + ". Operations team will connect you with doctor on appointment date. \n" +  "Regards, \n" + "Amban Team");
+		   Properties props = new Properties();
+		   props.put("mail.smtp.auth", "true");
+		   props.put("mail.smtp.starttls.enable", "true");
+		   props.put("mail.smtp.host", "smtp.gmail.com");
+		   props.put("mail.smtp.port", "587");
+		   Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+			      protected PasswordAuthentication getPasswordAuthentication() {
+			         return new PasswordAuthentication("ambantest@gmail.com", "nalasupara123");
+			      }
+			   });
+		   Message msg = new MimeMessage(session);
+		   msg.setFrom(new InternetAddress("ambantest@gmail.com", false));
+		   msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(patientMailId));
+		   if(flag == 1) {
+			   msg.setSubject("Amban Appointment Details");
+			   msg.setContent("Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getFirstName() + " is confirmed for "+ app.getAppointmentDate()
+			   + " " + app.getSlot() + ". Operations team will connect you with doctor on appointment date. \n Regards \n Amban Team", "text/html");
 		   } else {
-			   subject="Amban Appointment Cancelled Details";
-			   content= new Content("text/plain","Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getLastName() + " on "+ app.getAppointmentDate() 
-			   +" has been cancelled due to unforseen reasons. \n"+ "Kindly contact the hospital for arranging a new appointment. \n" + "Apologies for the inconvenience caused. \n"
-			   + "Regards, \n" +"Amban Team");
+			   msg.setSubject("Amban Appointment Cancelled Details");
+			   msg.setContent("Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getFirstName() + " on "+ app.getAppointmentDate() 
+			   +" has been cancelled due to unforseen reasons. Kindly contact the hospital for arranging a new appointment. \n Apologies for the inconvenience "
+			   + "caused.\n Regards \n Amban Team", "text/html");
 		   }
-	    
-	    Mail mail = new Mail(from, subject, to, content);
-
-	    SendGrid sg = new SendGrid(path);
-	    Request request = new Request();
-	    try {
-	      request.setMethod(Method.POST);
-	      request.setEndpoint("mail/send");
-	      request.setBody(mail.build());
-	      Response response = sg.api(request);
-	      System.out.println(response.getStatusCode());
-	      System.out.println(response.getBody());
-	      System.out.println(response.getHeaders());
-	    } catch (IOException ex) {
-	      System.out.println("email sending failed" +ex.getMessage());
-	    }
-	  }
-		
+		   msg.setSentDate(new Date());
+		   Transport.send(msg);   
+		}
 }
