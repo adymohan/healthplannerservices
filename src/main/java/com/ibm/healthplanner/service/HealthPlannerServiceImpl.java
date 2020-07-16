@@ -401,30 +401,37 @@ public class HealthPlannerServiceImpl implements HealthPlannerService {
 	}
 	
 	private void sendmail(String patientMailId, Doctor doc, int flag, Appointment app) throws AddressException, MessagingException, IOException {
-		   Properties props = new Properties();
-		   props.put("mail.smtp.auth", "true");
-		   props.put("mail.smtp.starttls.enable", "true");
-		   props.put("mail.smtp.host", "smtp.gmail.com");
-		   props.put("mail.smtp.port", "587");
-		   Session session = Session.getInstance(props, new javax.mail.Authenticator() {
-			      protected PasswordAuthentication getPasswordAuthentication() {
-			         return new PasswordAuthentication("ambantest@gmail.com", "nalasupara123");
-			      }
-			   });
-		   Message msg = new MimeMessage(session);
-		   msg.setFrom(new InternetAddress("ambantest@gmail.com", false));
-		   msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(patientMailId));
-		   if(flag == 1) {
-			   msg.setSubject("Amban Appointment Details");
-			   msg.setContent("Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getFirstName() + " is confirmed for "+ app.getAppointmentDate()
-			   + " " + app.getSlot() + ". Operations team will connect you with doctor on appointment date. \n Regards \n Amban Team", "text/html");
+		  String subject;
+		 Content content;
+		Email from = new Email("ambantest@gmail.com");
+	    Email to = new Email(patientMailId);
+	    String path = env.getProperty("sendgrid.api.key");
+	   
+	    if(flag == 1) {
+			   subject="Amban Appointment Details";
+			   content= new Content("text/plain","Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getLastName() + " is confirmed for "+ app.getAppointmentDate()
+			   + " " + app.getSlot() + ". Operations team will connect you with doctor on appointment date. \n" +  "Regards, \n" + "Amban Team");
 		   } else {
-			   msg.setSubject("Amban Appointment Cancelled Details");
-			   msg.setContent("Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getFirstName() + " on "+ app.getAppointmentDate() 
-			   +" has been cancelled due to unforseen reasons. Kindly contact the hospital for arranging a new appointment. \n Apologies for the inconvenience "
-			   + "caused.\n Regards \n Amban Team", "text/html");
+			   subject="Amban Appointment Cancelled Details";
+			   content= new Content("text/plain","Your appointment with Dr "+ doc.getName().getFirstName() + doc.getName().getLastName() + " on "+ app.getAppointmentDate() 
+			   +" has been cancelled due to unforseen reasons. \n"+ "Kindly contact the hospital for arranging a new appointment. \n" + "Apologies for the inconvenience caused. \n"
+			   + "Regards, \n" +"Amban Team");
 		   }
-		   msg.setSentDate(new Date());
-		   Transport.send(msg);   
-		}
+	    
+	    Mail mail = new Mail(from, subject, to, content);
+
+	    SendGrid sg = new SendGrid(path);
+	    Request request = new Request();
+	    try {
+	      request.setMethod(Method.POST);
+	      request.setEndpoint("mail/send");
+	      request.setBody(mail.build());
+	      Response response = sg.api(request);
+	      System.out.println(response.getStatusCode());
+	      System.out.println(response.getBody());
+	      System.out.println(response.getHeaders());
+	    } catch (IOException ex) {
+	      System.out.println("email sending failed" +ex.getMessage());
+	    }
+	  }
 }
